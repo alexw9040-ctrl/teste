@@ -1,0 +1,37 @@
+# Uso: copie .env.example para .env, preencha os segredos e rode `docker compose up --build`.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?defina APP_SECRET_KEY no .env}
+      DATABASE_URL: postgresql+psycopg://sigcem:${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}@db:5432/sigcem
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      STORAGE_ROOT: /data/storage
+      AUTO_CREATE_TABLES: ${AUTO_CREATE_TABLES:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    ports:
+      - "8000:8000"
+    volumes:
+      - sigcem-storage:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sigcem
+      POSTGRES_USER: sigcem
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigcem -d sigcem"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    volumes:
+      - sigcem-db:/var/lib/postgresql/data
+volumes:
+  sigcem-db:
+  sigcem-storage:
